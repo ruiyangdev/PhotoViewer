@@ -68,14 +68,12 @@
         CGPoint center = self.viewController.view.center;
         activityIndicator.center = center;
         [self.viewController.view addSubview:activityIndicator];
-
         [activityIndicator startAnimating];
 
         CDVPluginResult* pluginResult = nil;
 
         NSMutableArray *images = [command.arguments objectAtIndex:0];//图片数组
         NSString* index = [command.arguments objectAtIndex:1];//选中当前图片索引
-
 
        // BOOL isShareEnabled = [[command.arguments objectAtIndex:2] boolValue];
         showCloseBtn = [[command.arguments objectAtIndex:3] boolValue];
@@ -84,16 +82,27 @@
 
         if (images.count > 0) {
             [self.commandDelegate runInBackground:^{
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    [self showFullScreenMultiple:images index:[index integerValue]];
-                    [activityIndicator stopAnimating];
+                
+                dispatch_async(dispatch_get_global_queue(0, 0), ^{
+                    
+                    NSMutableArray *urls = [NSMutableArray new];
+                    for (int i = 0; i < images.count; i++) {
+                        
+                        NSString* url = [[images objectAtIndex:i] objectForKey:@"url"];
+                        NSURL *URL = [self localFileURLForImage:url];
+                        [urls addObject:URL];
+                    }
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [self showFullScreenMultiple:urls index:[index integerValue]];
+                        [activityIndicator stopAnimating];
+                    });
+                    
                 });
             }];
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
         } else {
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
         }
-
         [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
     }
 }
@@ -280,8 +289,9 @@
 
     for (int i = 0; i < imagesArray.count; i++) {
 
-        NSString* url = [[imagesArray objectAtIndex:i] objectForKey:@"url"];
-        NSURL *URL = [self localFileURLForImage:url];
+        //NSString* url = [[imagesArray objectAtIndex:i] objectForKey:@"url"];
+        //NSURL *URL = [self localFileURLForImage:url];
+        NSURL *URL = (NSURL *)[imagesArray objectAtIndex:i];
 
         UIImageView *imageView1 = [[UIImageView alloc]init];
         [imageView1 setContentMode:UIViewContentModeScaleAspectFit];
