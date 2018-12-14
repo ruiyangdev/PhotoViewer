@@ -73,7 +73,8 @@
 
         CDVPluginResult* pluginResult = nil;
 
-        NSMutableArray *images = [command.arguments objectAtIndex:0];
+        NSMutableArray *images = [command.arguments objectAtIndex:0];//图片数组
+        NSString* index = [command.arguments objectAtIndex:1];//选中当前图片索引
 
 
        // BOOL isShareEnabled = [[command.arguments objectAtIndex:2] boolValue];
@@ -84,7 +85,7 @@
         if (images.count > 0) {
             [self.commandDelegate runInBackground:^{
                 dispatch_async(dispatch_get_main_queue(), ^{
-                    [self showFullScreenMultiple:images];
+                    [self showFullScreenMultiple:images index:[index integerValue]];
                     [activityIndicator stopAnimating];
                 });
             }];
@@ -260,7 +261,7 @@
     }
 }
 
-- (void)showFullScreenMultiple:(NSMutableArray *)imagesArray{
+- (void)showFullScreenMultiple:(NSMutableArray *)imagesArray index:(NSInteger)index{
 
     CGFloat viewWidth = self.viewController.view.bounds.size.width;
     CGFloat viewHeight = self.viewController.view.bounds.size.height;
@@ -298,6 +299,7 @@
 
         [fullView addSubview:imageView1];
     }
+    fullView.contentOffset = CGPointMake(index * viewWidth, 0);
 }
 
 - (void)fullimagetapped:(UIGestureRecognizer *)gestureRecognizer {
