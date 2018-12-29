@@ -4,6 +4,7 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <MobileCoreServices/MobileCoreServices.h>
+#import "UILabel+AutoSize.h"
 
 @interface PhotoViewer : CDVPlugin <UIDocumentInteractionControllerDelegate, UIScrollViewDelegate> {
     // Member variables go here.
@@ -86,14 +87,34 @@
                 dispatch_async(dispatch_get_global_queue(0, 0), ^{
                     
                     NSMutableArray *urls = [NSMutableArray new];
+                    NSMutableArray *titles = [NSMutableArray new];
+                    NSMutableArray *descriptions = [NSMutableArray new];
+                    
                     for (int i = 0; i < images.count; i++) {
                         
+                        //图片地址
                         NSString* url = [[images objectAtIndex:i] objectForKey:@"url"];
                         NSURL *URL = [self localFileURLForImage:url];
                         [urls addObject:URL];
+                        
+                        //标题
+                        NSString* title = [[images objectAtIndex:i] objectForKey:@"title"];
+                        if (![self checkEmptyString:title]) {
+                            [titles addObject:title];
+                        }else{
+                            [titles addObject:@""];
+                        }
+                        
+                        //描述
+                        NSString* description = [[images objectAtIndex:i] objectForKey:@"description"];
+                        if (![self checkEmptyString:description]) {
+                            [descriptions addObject:description];
+                        }else{
+                            [descriptions addObject:@""];
+                        }
                     }
                     dispatch_async(dispatch_get_main_queue(), ^{
-                        [self showFullScreenMultiple:urls index:[index integerValue]];
+                        [self showFullScreenMultiple:urls titles:titles descriptions:descriptions index:[index integerValue]];
                         [activityIndicator stopAnimating];
                     });
                     
@@ -270,14 +291,14 @@
     }
 }
 
-- (void)showFullScreenMultiple:(NSMutableArray *)imagesArray index:(NSInteger)index{
+- (void)showFullScreenMultiple:(NSMutableArray *)urls titles:(NSMutableArray *)titles descriptions:(NSMutableArray *)descriptions index:(NSInteger)index{
 
     CGFloat viewWidth = self.viewController.view.bounds.size.width;
     CGFloat viewHeight = self.viewController.view.bounds.size.height;
 
     //fullView is gloabal, So we can acess any time to remove it
     fullView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 0, viewWidth, viewHeight)];
-    fullView.contentSize = CGSizeMake(viewWidth * imagesArray.count, viewHeight);
+    fullView.contentSize = CGSizeMake(viewWidth * urls.count, viewHeight);
     [fullView setBackgroundColor:[UIColor blackColor]];
     fullView.pagingEnabled = YES;
     // For supporting zoom,
@@ -287,12 +308,13 @@
     fullView.delegate = self;
     [self.viewController.view addSubview:fullView];
 
-    for (int i = 0; i < imagesArray.count; i++) {
+    for (int i = 0; i < urls.count; i++) {
 
         //NSString* url = [[imagesArray objectAtIndex:i] objectForKey:@"url"];
         //NSURL *URL = [self localFileURLForImage:url];
-        NSURL *URL = (NSURL *)[imagesArray objectAtIndex:i];
+        NSURL *URL = (NSURL *)[urls objectAtIndex:i];
 
+        //图片
         UIImageView *imageView1 = [[UIImageView alloc]init];
         [imageView1 setContentMode:UIViewContentModeScaleAspectFit];
         UIImage *image = [UIImage imageWithContentsOfFile:URL.path];
@@ -300,14 +322,52 @@
         imageView1.image = image;
         imageView1.contentMode = UIViewContentModeScaleAspectFit;
         [imageView1 setFrame:CGRectMake(viewWidth * i, 0, viewWidth, viewHeight)];
-
+        
         UITapGestureRecognizer *singleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(fullimagetapped:)];
         singleTap.numberOfTapsRequired = 1;
         singleTap.numberOfTouchesRequired = 1;
         [imageView1 addGestureRecognizer:singleTap];
         [imageView1 setUserInteractionEnabled:YES];
-
         [fullView addSubview:imageView1];
+        
+        //描述
+        UILabel *descriptionlab =  [[UILabel alloc] initWithFrame:CGRectMake(25, viewHeight - (descriptionlab.frame.size.height + 24), viewWidth-50, 25)];
+        descriptionlab.backgroundColor = [UIColor clearColor];
+        descriptionlab.font = [UIFont systemFontOfSize:14];
+        descriptionlab.textColor = [UIColor whiteColor];
+        descriptionlab.numberOfLines = 0;
+        
+        //标题
+        UILabel *titlelab = [[UILabel alloc] init];
+        titlelab.backgroundColor = [UIColor clearColor];
+        titlelab.font = [UIFont fontWithName:@"Helvetica-Bold" size:18];
+        titlelab.textColor = [UIColor whiteColor];
+        titlelab.textAlignment = NSTextAlignmentRight;
+
+        
+        NSString *title = [titles objectAtIndex:i];
+        NSString *description = [descriptions objectAtIndex:i];
+        
+        if (![self checkEmptyString:title]) {
+            titlelab.text = title;
+        }
+        
+        if (![self checkEmptyString:description]) {
+            
+            descriptionlab.text = description;
+            [descriptionlab resizeLabelVertical:25];
+            descriptionlab.frame = CGRectMake(25, viewHeight - (descriptionlab.frame.size.height + 24), viewWidth-50, descriptionlab.frame.size.height);
+            
+            titlelab.frame = CGRectMake(25, viewHeight - (descriptionlab.frame.size.height + 50), viewWidth-50, 25);
+            [imageView1 addSubview:descriptionlab];
+            
+        }else{
+            
+            titlelab.frame = CGRectMake(25, viewHeight - 60, viewWidth-50, 25);
+        }
+        
+        [imageView1 addSubview:titlelab];
+        
     }
     fullView.contentOffset = CGPointMake(index * viewWidth, 0);
 }
@@ -339,4 +399,31 @@
         [closeBtn setFrame:CGRectMake(0, viewHeight - 50, 50, 50)];
     }
 }
+
+/**
+ *  判断字符串是否为空
+ *
+ *  @param string 字符串
+ *
+ *  @return 返回YES为空 NO不为空
+ */
+-(BOOL)checkEmptyString:(NSString*)string {
+    
+    if (string == nil || string == NULL) {
+        return YES;
+    }
+    if ([string isKindOfClass:[NSNull class]] || [[string class] isSubclassOfClass:[NSNull class]]) {
+        return YES;
+    }
+    if ([[string stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]] length]==0) {
+        return YES;
+    }
+    if([string isEqualToString:@""] || [string isEqualToString:@"<null>"] || [string isEqualToString:@"(null)"])
+    {
+        return YES;
+    }
+    return NO;
+}
+
+
 @end
