@@ -237,11 +237,11 @@
 }
 
 
--(UIView *) viewForZoomingInScrollView:(UIScrollView *)inScroll
-{
-    NSArray *subviews = [inScroll subviews];
-    return subviews[0];
-}
+//-(UIView *) viewForZoomingInScrollView:(UIScrollView *)inScroll
+//{
+//    NSArray *subviews = [inScroll subviews];
+//    return subviews[0];
+//}
 
 //This will create a temporary image view and animate it to fullscreen
 - (void)showFullScreen:(NSURL *)url andTitle:(NSString *)title {
@@ -302,8 +302,8 @@
     [fullView setBackgroundColor:[UIColor blackColor]];
     fullView.pagingEnabled = YES;
     // For supporting zoom,
-    fullView.minimumZoomScale = 1.0;
-    fullView.maximumZoomScale = 3.0;
+    //fullView.minimumZoomScale = 1.0;
+    //fullView.maximumZoomScale = 3.0;
     fullView.clipsToBounds = YES;
     fullView.delegate = self;
     [self.viewController.view addSubview:fullView];
@@ -331,7 +331,7 @@
         [fullView addSubview:imageView1];
         
         //描述
-        UILabel *descriptionlab =  [[UILabel alloc] initWithFrame:CGRectMake(25, viewHeight - (descriptionlab.frame.size.height + 24), viewWidth-50, 25)];
+        UILabel *descriptionlab =  [[UILabel alloc] initWithFrame:CGRectMake(25, viewHeight - (25+ 24), viewWidth-50, 25)];
         descriptionlab.backgroundColor = [UIColor clearColor];
         descriptionlab.font = [UIFont systemFontOfSize:14];
         descriptionlab.textColor = [UIColor whiteColor];
