@@ -14,6 +14,8 @@
     UIButton *closeBtn;
     BOOL showCloseBtn;
     BOOL copyToReference;
+    UIImageView *fullimageView;
+    CGFloat zoomScale;
 }
 
 @property (nonatomic, strong) UIDocumentInteractionController *docInteractionController;
@@ -236,12 +238,25 @@
     return nil;
 }
 
+//滚动代理  scroll减速完毕调用
+-(void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView{
+    //第几页
+    int pageNo= scrollView.contentOffset.x/scrollView.frame.size.width;
+    NSArray *subviews = [scrollView subviews];
+    UIScrollView *views = subviews[pageNo+1];
+    fullimageView = [views viewWithTag:999];
+}
 
-//-(UIView *) viewForZoomingInScrollView:(UIScrollView *)inScroll
-//{
-//    NSArray *subviews = [inScroll subviews];
-//    return subviews[0];
-//}
+-(nullable UIView *) viewForZoomingInScrollView:(UIScrollView *)inScroll{
+    
+    //scrollVew中要缩放的视图
+    return fullimageView;
+}
+
+- (void)scrollViewDidEndZooming:(UIScrollView *)scrollView withView:(UIView *)view atScale:(CGFloat)scale{
+    //把当前的缩放比例设进ZoomScale，以便下次缩放时实在现有的比例的基础上
+    [scrollView setZoomScale:scale animated:NO];
+}
 
 //This will create a temporary image view and animate it to fullscreen
 - (void)showFullScreen:(NSURL *)url andTitle:(NSString *)title {
@@ -301,34 +316,48 @@
     fullView.contentSize = CGSizeMake(viewWidth * urls.count, viewHeight);
     [fullView setBackgroundColor:[UIColor blackColor]];
     fullView.pagingEnabled = YES;
-    // For supporting zoom,
-    //fullView.minimumZoomScale = 1.0;
-    //fullView.maximumZoomScale = 3.0;
-    fullView.clipsToBounds = YES;
     fullView.delegate = self;
+    zoomScale = 1.0;
+    
     [self.viewController.view addSubview:fullView];
 
     for (int i = 0; i < urls.count; i++) {
+        
+        UIScrollView *scrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(viewWidth * i, 0, viewWidth, viewHeight)];
+        scrollView.tag = (i+1);
+        scrollView.contentSize = CGSizeMake(viewWidth, viewHeight);
+        scrollView.backgroundColor = [UIColor clearColor];
+        scrollView.delegate = self;
+        // For supporting zoom,
+        //设置最大放大倍数，默认是1.0
+        scrollView.maximumZoomScale = 2.0;
+        //设置最小缩小倍数，默认是1.0
+        scrollView.minimumZoomScale = 1.0;
+        [scrollView setZoomScale:1.0 animated:YES];
+        [fullView addSubview:scrollView];
 
-        //NSString* url = [[imagesArray objectAtIndex:i] objectForKey:@"url"];
-        //NSURL *URL = [self localFileURLForImage:url];
         NSURL *URL = (NSURL *)[urls objectAtIndex:i];
-
         //图片
         UIImageView *imageView1 = [[UIImageView alloc]init];
+        imageView1.tag = 999;
         [imageView1 setContentMode:UIViewContentModeScaleAspectFit];
         UIImage *image = [UIImage imageWithContentsOfFile:URL.path];
         [imageView1 setBackgroundColor:[UIColor clearColor]];
         imageView1.image = image;
         imageView1.contentMode = UIViewContentModeScaleAspectFit;
-        [imageView1 setFrame:CGRectMake(viewWidth * i, 0, viewWidth, viewHeight)];
+        [imageView1 setFrame:CGRectMake(0, 0, viewWidth, viewHeight)];
+        [scrollView addSubview:imageView1];
         
+        //单击手势
         UITapGestureRecognizer *singleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(fullimagetapped:)];
         singleTap.numberOfTapsRequired = 1;
         singleTap.numberOfTouchesRequired = 1;
-        [imageView1 addGestureRecognizer:singleTap];
-        [imageView1 setUserInteractionEnabled:YES];
-        [fullView addSubview:imageView1];
+        [scrollView addGestureRecognizer:singleTap];
+
+        
+        if(i == 0){
+            fullimageView = imageView1;
+        }
         
         //描述
         UILabel *descriptionlab =  [[UILabel alloc] initWithFrame:CGRectMake(25, viewHeight - (25+ 24), viewWidth-50, 25)];
